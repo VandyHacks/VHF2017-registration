@@ -53,6 +53,10 @@ angular.module('reg')
           });
       };
 
+      authService.loginWithMlh = function() {
+        window.location.href = "/mlh"
+      };
+
       authService.logout = function(callback) {
         // Clear the session
         Session.destroy(callback);

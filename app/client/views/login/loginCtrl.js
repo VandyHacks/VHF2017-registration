@@ -39,6 +39,11 @@ angular.module('reg')
           $scope.email, $scope.password, onSuccess, onError);
       };
 
+      $scope.loginWithMlh = function() {
+        resetError();
+        AuthService.loginWithMlh(onSuccess, onError);
+      }
+      
       $scope.setLoginState = function(state) {
         $scope.loginState = state;
       };

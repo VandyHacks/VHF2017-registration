@@ -1,8 +1,25 @@
+const bookshelf = require('../database');
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt-nodejs');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
+
+/*    User (login per Application)    */
+const User = bookshelf.Model.extend({
+  tableName: 'application',
+  hacker: function() {
+    return this.hasOne(Hacker);
+  }
+});
+/*    Hacker (user information)   */
+const Hacker = bookshelf.Model.extend({
+  tableName: 'hacker',
+  application: function() {
+    return this.belongsTo(User);
+  }
+});
 
 const profile = {
 
@@ -313,6 +330,15 @@ schema.statics.findOneByEmail = function(email) {
 };
 
 /**
+ * Finds a user by its email address
+ * @param  {String}           email the email address
+ * @return {Promise<User>}    Promise with user model (or bust)
+ */
+User.findOneByEmail = function(email) {
+  return User.where({email}).fetch();
+};
+
+/**
  * Get a single user using a signed token.
  * @param  {String}   token    User's authentication token.
  * @param  {Function} callback args(err, user)
@@ -372,4 +398,6 @@ schema.virtual('status.name').get(function() {
   return 'incomplete';
 });
 
-module.exports = mongoose.model('User', schema);
+// module.exports = mongoose.model('User', schema);
+
+module.exports = User;

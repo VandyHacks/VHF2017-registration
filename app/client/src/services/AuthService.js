@@ -6,18 +6,18 @@ angular.module('reg')
     '$window',
     'Session',
     function($http, $rootScope, $state, $window, Session) {
-      var authService = {};
+      const authService = {};
 
-      function loginSuccess(data, cb){
+      function loginSuccess(data, cb) {
         // Winner winner you get a token
         Session.create(data.token, data.user);
 
-        if (cb){
+        if (cb) {
           cb(data.user);
         }
       }
 
-      function loginFailure(data, cb){
+      function loginFailure(data, cb) {
         $state.go('login');
         if (cb) {
           cb(data);
@@ -30,31 +30,31 @@ angular.module('reg')
             email: email,
             password: password
           })
-          .success(function(data){
+          .success((data) => {
             loginSuccess(data, onSuccess);
           })
-          .error(function(data){
+          .error((data) => {
             loginFailure(data, onFailure);
           });
       };
 
-      authService.loginWithToken = function(token, onSuccess, onFailure){
+      authService.loginWithToken = function(token, onSuccess, onFailure) {
         return $http
           .post('/auth/login', {
             token: token
           })
-          .success(function(data){
+          .success((data) => {
             loginSuccess(data, onSuccess);
           })
-          .error(function(data, statusCode){
-            if (statusCode === 400){
+          .error((data, statusCode) => {
+            if (statusCode === 400) {
               Session.destroy(loginFailure);
             }
           });
       };
 
       authService.loginWithMlh = function() {
-        window.location.href = "/mlh"
+        window.location.href = '/mlh';
       };
 
       authService.logout = function(callback) {
@@ -69,10 +69,10 @@ angular.module('reg')
             email: email,
             password: password
           })
-          .success(function(data){
+          .success((data) => {
             loginSuccess(data, onSuccess);
           })
-          .error(function(data){
+          .error((data) => {
             loginFailure(data, onFailure);
           });
       };
@@ -80,34 +80,34 @@ angular.module('reg')
       authService.verify = function(token, onSuccess, onFailure) {
         return $http
           .get('/auth/verify/' + token)
-          .success(function(user){
+          .success((user) => {
             Session.setUser(user);
-            if (onSuccess){
+            if (onSuccess) {
               onSuccess(user);
             }
           })
-          .error(function(data){
+          .error((data) => {
             if (onFailure) {
               onFailure(data);
             }
           });
       };
 
-      authService.resendVerificationEmail = function(onSuccess, onFailure){
+      authService.resendVerificationEmail = function(onSuccess, onFailure) {
         return $http
           .post('/auth/verify/resend', {
             id: Session.getUserId()
           });
       };
 
-      authService.sendResetEmail = function(email){
+      authService.sendResetEmail = function(email) {
         return $http
           .post('/auth/reset', {
             email: email
           });
       };
 
-      authService.resetPassword = function(token, pass, onSuccess, onFailure){
+      authService.resetPassword = function(token, pass, onSuccess, onFailure) {
         return $http
           .post('/auth/reset/password', {
             token: token,

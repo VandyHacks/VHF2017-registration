@@ -6,8 +6,9 @@
   "dependencies": {
     "async": "^1.4.2",
     "bcrypt-nodejs": "0.0.3",
-    "bookshelf": "^0.10.4",
     "body-parser": "^1.17.2",
+    "bookshelf": "^0.10.4",
+    "bookshelf-validate": "^2.0.3",
     "cookie-parser": "~1.4.3",
     "dotenv": "^4.0.0",
     "email-templates": "^2.0.1",

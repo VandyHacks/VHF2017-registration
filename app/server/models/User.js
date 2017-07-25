@@ -18,6 +18,12 @@ const Hacker = bookshelf.Model.extend({
   tableName: 'hacker',
   application: function() {
     return this.belongsTo(User);
+  },
+  validations: {
+    email: [
+      // 'isRequired',        (yeh or neh?)
+      { method: 'isEmail', error: 'Invalid email' }
+    ]
   }
 });
 
@@ -323,11 +329,11 @@ schema.statics.verifyTempAuthToken = function(token, callback) {
   });
 };
 
-schema.statics.findOneByEmail = function(email) {
-  return this.findOne({
-    email: new RegExp('^' + email + '$', 'i')
-  });
-};
+// schema.statics.findOneByEmail = function(email) {
+//   return this.findOne({
+//     email: new RegExp('^' + email + '$', 'i')
+//   });
+// };
 
 /**
  * Finds a user by its email address
@@ -349,6 +355,15 @@ schema.statics.getByToken = function(token, callback) {
       return callback(err);
     }
     this.findOne({_id: id}, callback);
+  });
+};
+
+User.getByToken = function(token, callback) {
+  jwt.verify(token, JWT_SECRET, (err, id) => {
+    if (err) {
+      return callback(err);
+    }
+    this.where({id}).fetch();     // Callback vs promise issue
   });
 };
 

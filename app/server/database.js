@@ -7,6 +7,7 @@ const bookshelf = require('bookshelf')(knex);
 const validator = require('validator');
 
 bookshelf.plugin('visibility');
+bookshelf.plugin('virtuals');
 bookshelf.plugin('bookshelf-validate', {
   validator,
   validateOnSave: true

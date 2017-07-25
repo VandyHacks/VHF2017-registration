@@ -24,6 +24,37 @@ const Hacker = bookshelf.Model.extend({
       // 'isRequired',        (yeh or neh?)
       { method: 'isEmail', error: 'Invalid email' }
     ]
+  },
+  virtuals: {
+    // html pages still check by status.name
+    // TODO:: either create status table or change those pages
+    status: function() {
+      if (this.get('attended')) {
+        return 'checked in';
+      }
+
+      if (this.get('')) {
+        return 'declined';
+      }
+
+      if (this.get('rsvp')) {
+        return 'rsvped';
+      }
+
+      if (this.get('accepted')) {
+        return 'admitted';
+      }
+
+      if (this.get('applied')) {
+        return 'applied';
+      }
+
+      // if (!this.verified) {
+      //   return 'unverified';
+      // }
+
+      return 'incomplete';
+    }
   }
 });
 

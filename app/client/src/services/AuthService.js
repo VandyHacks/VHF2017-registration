@@ -54,7 +54,7 @@ angular.module('app')
       };
 
       authService.loginWithMlh = function() {
-        window.location.href = '/mlh';
+        $window.location.href = '/mlh';
       };
 
       authService.logout = function(callback) {

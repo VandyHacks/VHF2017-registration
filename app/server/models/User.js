@@ -6,18 +6,15 @@ const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 
+/*    Current Hackathon   */
+// var name matches column name in db (case-sensitive)
+const hackathonid = 4;
+
 /*    User (login per Application)    */
 const User = bookshelf.Model.extend({
   tableName: 'application',
   hacker: function() {
     return this.hasOne(Hacker);
-  }
-});
-/*    Hacker (user information)   */
-const Hacker = bookshelf.Model.extend({
-  tableName: 'hacker',
-  application: function() {
-    return this.belongsTo(User);
   },
   validations: {
     email: [
@@ -31,10 +28,6 @@ const Hacker = bookshelf.Model.extend({
     status: function() {
       if (this.get('attended')) {
         return 'checked in';
-      }
-
-      if (this.get('')) {
-        return 'declined';
       }
 
       if (this.get('rsvp')) {
@@ -56,6 +49,20 @@ const Hacker = bookshelf.Model.extend({
       return 'incomplete';
     }
   }
+});
+/*    Hacker (user information)   */
+const Hacker = bookshelf.Model.extend({
+  tableName: 'hacker',
+  application: function() {
+    return this.belongsTo(User);
+  },
+  virtuals: {
+    fullName: function() {
+      // Template literals?..
+      return this.get('first_name') + ' ' + this.get('last_name');
+    }
+  }
+  // TODO: validations
 });
 
 const profile = {
@@ -290,17 +297,17 @@ schema.set('toObject', {
 // =========================================
 
 // checking if this password matches
-schema.methods.checkPassword = function(password) {
-  return bcrypt.compareSync(password, this.password);
+User.prototype.checkPassword = function(password) {
+  return bcrypt.compareSync(password, this.get('password'));
 };
 
 // Token stuff
-schema.methods.generateEmailVerificationToken = function() {
-  return jwt.sign(this.email, JWT_SECRET);
+User.prototype.generateEmailVerificationToken = function() {
+  return jwt.sign(this.get('email'), JWT_SECRET);
 };
 
-schema.methods.generateAuthToken = function() {
-  return jwt.sign(this._id, JWT_SECRET);
+User.prototype.generateAuthToken = function() {
+  return jwt.sign(this.get('id'), JWT_SECRET);
 };
 
 /**
@@ -312,9 +319,9 @@ schema.methods.generateAuthToken = function() {
  *   exp: expiration ms
  * }
  */
-schema.methods.generateTempAuthToken = function() {
+User.prototype.generateTempAuthToken = function() {
   return jwt.sign({
-    id: this._id
+    id: this.get('id')
   }, JWT_SECRET, {
     expiresInMinutes: 60
   });
@@ -323,8 +330,7 @@ schema.methods.generateTempAuthToken = function() {
 // =========================================
 // Static Methods
 // =========================================
-
-schema.statics.generateHash = function(password) {
+User.generateHash = function(password) {
   return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
 };
 
@@ -333,7 +339,7 @@ schema.statics.generateHash = function(password) {
  * @param  {[type]}   token token
  * @param  {Function} cb    args(err, email)
  */
-schema.statics.verifyEmailVerificationToken = function(token, callback) {
+User.verifyEmailVerificationToken = function(token, callback) {
   jwt.verify(token, JWT_SECRET, (err, email) => {
     return callback(err, email);
   });
@@ -344,7 +350,7 @@ schema.statics.verifyEmailVerificationToken = function(token, callback) {
  * @param  {[type]}   token    temporary auth token
  * @param  {Function} callback args(err, id)
  */
-schema.statics.verifyTempAuthToken = function(token, callback) {
+User.verifyTempAuthToken = function(token, callback) {
   jwt.verify(token, JWT_SECRET, (err, payload) => {
     if (err || !payload) {
       return callback(err);
@@ -372,7 +378,12 @@ schema.statics.verifyTempAuthToken = function(token, callback) {
  * @return {Promise<User>}    Promise with user model (or bust)
  */
 User.findOneByEmail = function(email) {
-  return User.where({email}).fetch();
+  return User.where({hackathonid, email}).fetch()
+    // If no user, trigger catch
+    .then((user) => {
+      if (!user) throw new Error('User with email ' + email + ' not found');
+      return user;
+    });
 };
 
 /**
@@ -394,7 +405,7 @@ User.getByToken = function(token, callback) {
     if (err) {
       return callback(err);
     }
-    this.where({id}).fetch();     // Callback vs promise issue
+    User.where({id}).fetch();     // Callback vs promise issue
   });
 };
 
@@ -408,42 +419,14 @@ schema.statics.validateProfile = function(profile, cb) {
     ));
 };
 
-// =========================================
-// Virtuals
-// =========================================
-
-/**
- * Has the user completed their profile?
- * This provides a verbose explanation of their furthest state.
- */
-schema.virtual('status.name').get(function() {
-  if (this.status.checkedIn) {
-    return 'checked in';
-  }
-
-  if (this.status.declined) {
-    return 'declined';
-  }
-
-  if (this.status.confirmed) {
-    return 'confirmed';
-  }
-
-  if (this.status.admitted) {
-    return 'admitted';
-  }
-
-  if (this.status.completedProfile) {
-    return 'submitted';
-  }
-
-  if (!this.verified) {
-    return 'unverified';
-  }
-
-  return 'incomplete';
-});
-
-// module.exports = mongoose.model('User', schema);
+User.validateProfile = function(profile, cb) {
+  return cb(!(
+    profile.name.length > 0 &&
+    profile.adult &&
+    profile.school.length > 0 &&
+    ['2016', '2017', '2018', '2019'].indexOf(profile.graduationYear) > -1 &&
+    ['M', 'F', 'O', 'N'].indexOf(profile.gender) > -1
+    ));
+};
 
 module.exports = User;

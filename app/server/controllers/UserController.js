@@ -195,7 +195,11 @@ UserController.getByToken = function(token, callback) {
  * @param  {Function} callback args(err, user)
  */
 UserController.getAll = function(callback) {
-  User.find({}, callback);
+  User.fetchAll()
+      .then((users) => {
+        callback(null, users.toJSON());
+      })
+      .catch(err => callback({message: err}));
 };
 
 /**
@@ -254,7 +258,10 @@ UserController.getPage = function(query, callback) {
  * @param  {Function} callback args(err, user)
  */
 UserController.getById = function(id, callback) {
-  User.findById(id, callback);
+  User.where({id})
+      .fetch()
+      .then(user => callback(null, user.toJSON()) )
+      .catch(err => callback(err));
 };
 
 /**
@@ -404,26 +411,21 @@ UserController.verifyByToken = function(token, callback) {
  * @param  {Function} callback args(err, users)
  */
 UserController.getTeammates = function(id, callback) {
-  User.findById(id, (err, user) => {
-    if (err || !user) {
-      return callback(err, user);
-    }
+  User.where({id})
+      .fetch()
+      .then((user) => {
+        if (!user) throw new Error('No user found for this id.');
 
-    const code = user.teamCode;
+        // Not in camelCase bc matching db col name
+        // TODO:: change db column name?...
+        const team_id = user.get('team_id');
+        if (!team_id) throw new Error("Your're not on a team.");
 
-    if (!code) {
-      return callback({
-        message: "You're not on a team."
-      });
-    }
-
-    User
-      .find({
-        teamCode: code
+        return User.where({team_id})
+                   .fetchAll({ withRelated: ['hacker.fullName'] });
       })
-      .select('profile.name')
-      .exec(callback);
-  });
+      .then(teammates => callback(null, teammates))
+      .catch(err => callback({ message: err }));
 };
 
 /**
@@ -432,6 +434,7 @@ UserController.getTeammates = function(id, callback) {
  * @param  {String}   code     Code of the proposed team
  * @param  {Function} callback args(err, users)
  */
+// TODO: switch to bookshelf once we remake db
 UserController.createOrJoinTeam = function(id, code, callback) {
   if (!code) {
     return callback({
@@ -478,22 +481,22 @@ UserController.createOrJoinTeam = function(id, code, callback) {
  * @param  {Function} callback args(err, user)
  */
 UserController.leaveTeam = function(id, callback) {
-  User.findOneAndUpdate({
-    _id: id
-  }, {
-    $set: {
-      teamCode: null
-    }
-  }, {
-    new: true
-  },
-  callback);
+  User.where({id})
+      .fetch()
+      .then((user) => {
+        user.set('team_id', null);
+        return user.save();
+      })
+      .then(user => callback(null, user.toJSON()))
+      .catch(err => callback({ message: err }));
 };
 
 /**
  * Resend an email verification email given a user id.
  */
 UserController.sendVerificationEmailById = function(id, callback) {
+
+  // TODO: switch to bookshelf once we remake db
   User.findOne(
     {
       _id: id,
@@ -516,16 +519,12 @@ UserController.sendVerificationEmailById = function(id, callback) {
  * @return {[type]}            [description]
  */
 UserController.sendPasswordResetEmail = function(email, callback) {
-  User
-    .findOneByEmail(email)
-    .exec((err, user) => {
-      if (err || !user) {
-        return callback(err);
-      }
-
+  User.findOneByEmail(email)
+    .then((user) => {
       const token = user.generateTempAuthToken();
       Mailer.sendPasswordResetEmail(email, token, callback);
-    });
+    })
+    .catch(err => callback({message: err}));
 };
 
 /**
@@ -539,32 +538,19 @@ UserController.sendPasswordResetEmail = function(email, callback) {
  */
 UserController.changePassword = function(id, oldPassword, newPassword, callback) {
   if (!id || !oldPassword || !newPassword) {
-    return callback({
-      message: 'Bad arguments.'
-    });
+    return callback({message: 'Bad arguments.'});
   }
 
-  User
-    .findById(id)
-    .select('password')
-    .exec((err, user) => {
-      if (user.checkPassword(oldPassword)) {
-        User.findOneAndUpdate({
-          _id: id
-        }, {
-          $set: {
-            password: User.generateHash(newPassword)
-          }
-        }, {
-          new: true
-        },
-        callback);
-      } else {
-        return callback({
-          message: 'Incorrect password'
-        });
-      }
-    });
+  User.where({id})
+      .fetch({require: true, columns: ['password']})
+      .then((user) => {
+        if (!user.checkPassword(oldPassword)) throw new Error('Incorrect Password');
+
+        user.set({password: User.generateHash(newPassword)});
+        return user.save();
+      })
+      .then(user => callback(null, user.toJSON()))
+      .catch(err => callback({message: err}));
 };
 
 /**
@@ -591,23 +577,17 @@ UserController.resetPassword = function(token, password, callback) {
       return callback(err);
     }
 
-    User
-      .findOneAndUpdate({
-        _id: id
-      }, {
-        $set: {
-          password: User.generateHash(password)
-        }
-      }, (err, user) => {
-        if (err || !user) {
-          return callback(err);
-        }
-
-        Mailer.sendPasswordChangedEmail(user.email);
-        return callback(null, {
-          message: 'Password successfully reset!'
-        });
-      });
+    User.where({id})
+      .fetch({require: true, columns: ['password']})
+      .then((user) => {
+        user.set({password: User.generateHash(password)});
+        return user.save();
+      })
+      .then(user => {
+        Mailer.sendPasswordChangedEmail(user.get('email'));
+        return callback(null, {message: 'Password successfully reset!'});
+      })
+      .catch(err => callback({message: err}));
   });
 };
 

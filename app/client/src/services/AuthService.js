@@ -53,6 +53,10 @@ angular.module('app')
           });
       };
 
+      authService.getAddress = function() {
+        return $window.location.href;
+      }
+
       authService.loginWithMlh = function() {
         $window.location.href = '/mlh';
       };

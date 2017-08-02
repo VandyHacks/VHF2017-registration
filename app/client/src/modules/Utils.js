@@ -2,6 +2,12 @@ angular.module('app')
   .factory('Utils', [
     function() {
       return {
+        getToken : function(url) {
+          let index = url.indexOf("access_token");
+          let tokenIndex = url.indexOf("token_type");
+          let code = url.substr(index + 13, tokenIndex - index - 14)
+          return code;
+        },
         isRegOpen: function(settings) {
           return Date.now() > settings.timeOpen && Date.now() < settings.timeClose;
         },

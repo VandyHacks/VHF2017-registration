@@ -422,7 +422,7 @@ UserController.getTeammates = function(id, callback) {
         if (!team_id) throw new Error("Your're not on a team.");
 
         return User.where({team_id})
-                   .fetchAll({ withRelated: ['hacker.fullName'] });
+                   .fetchAll({ columns: [], withRelated: ['hacker.fullName'] });
       })
       .then(teammates => callback(null, teammates))
       .catch(err => callback({ message: err }));
@@ -448,9 +448,7 @@ UserController.createOrJoinTeam = function(id, code, callback) {
     });
   }
 
-  User.find({
-    teamCode: code
-  })
+  User.where({team_id: code})
   .select('profile.name')
   .exec((err, users) => {
     // Check to see if this team is joinable (< team max size)
